@@ -1,0 +1,126 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+
+          discovery:
+            locator:
+              enabled: false
+              lower-case-service-id: true
+
+          routes:
+
+            # =========================
+            # AUTH SERVICE
+            # =========================
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
+
+
+            # =========================
+            # WALLET SERVICE
+            # =========================
+            - id: wallet-service
+              uri: lb://wallet-service
+              predicates:
+                - Path=/api/wallets/**
+              filters:
+                - RewritePath=/api/wallets/(?<segment>.*), /api/wallets/$\{segment}
+
+
+            # =========================
+            # PAYMENT SERVICE
+            # =========================
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - RewritePath=/api/payments/(?<segment>.*), /api/payments/$\{segment}
+
+
+            # =========================
+            # TRANSACTION SERVICE
+            # =========================
+            - id: transaction-service
+              uri: lb://transaction-service
+              predicates:
+                - Path=/api/transactions/**
+              filters:
+                - RewritePath=/api/transactions/(?<segment>.*), /api/transactions/$\{segment}
+
+
+            # =========================
+            # NOTIFICATION SERVICE
+            # =========================
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+              filters:
+                - RewritePath=/api/notifications/(?<segment>.*), /api/notifications/$\{segment}
+
+
+            # =========================
+            # AUDIT SERVICE
+            # =========================
+            - id: audit-service
+              uri: lb://audit-service
+              predicates:
+                - Path=/api/audit-logs/**
+              filters:
+                - RewritePath=/api/audit-logs/(?<segment>.*), /api/audit-logs/$\{segment}
+
+
+            # =========================
+            # FRAUD SERVICE
+            # =========================
+            - id: fraud-service
+              uri: lb://fraud-detection-service
+              predicates:
+                - Path=/api/fraud/**
+              filters:
+                - RewritePath=/api/fraud/(?<segment>.*), /api/fraud/$\{segment}
+
+
+# =========================
+# EUREKA
+# =========================
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+
+# =========================
+# ACTUATOR
+# =========================
+management:
+  endpoint:
+    gateway:
+      access: read-only
+
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info
+
+
+# =========================
+# LOGGING
+# =========================
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route: DEBUG

@@ -1,0 +1,15 @@
+package com.nexora.notification.enums;
+
+public enum NotificationType {
+    PAYMENT_SUCCESS,
+    PAYMENT_FAILED,
+    PAYMENT_REFUNDED,
+    WALLET_CREATED,
+    WALLET_CREDITED,
+    WALLET_DEBITED,
+    TRANSACTION_SUCCESS,
+    TRANSACTION_FAILED,
+    USER_REGISTERED,
+    USER_LOGIN,
+    PASSWORD_CHANGED
+}

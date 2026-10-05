@@ -1,0 +1,64 @@
+# ============================================
+# NEXORA - Root .gitignore
+# ============================================
+
+# ---------- Java / Maven ----------
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+replay_pid*
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ---------- Eclipse ----------
+.metadata/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---------- Logs ----------
+logs/
+*.log
+log/
+*.log.*
+
+# ---------- Environment / Secrets ----------
+.env
+.env.*
+application-local.yml
+application-local.properties
+*-local.yml
+*-local.properties
+secrets/
+*.pem
+*.key
+
+# ---------- Node / Frontend ----------
+node_modules/
+dist/
+build/
+
+# ---------- Test Output ----------
+surefire-reports/
+failsafe-reports/
