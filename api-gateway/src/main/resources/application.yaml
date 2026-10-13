@@ -124,3 +124,11 @@ logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.gateway.route: DEBUG
+    org.springframework.security: INFO
+
+
+# =========================
+# JWT — MUST MATCH AUTH SERVICE
+# =========================
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
