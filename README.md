@@ -799,35 +799,17 @@ The Payment Service uses **Resilience4j** to make Payment → Wallet communicati
 
 The Circuit Breaker operates in three main states:
 
-```text
-                    ┌─────────────────┐
-                    │      CLOSED     │
-                    │  Normal Traffic │
-                    └────────┬────────┘
-                             │
-                  Failure threshold reached
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │       OPEN      │
-                    │  Calls Blocked  │
-                    └────────┬────────┘
-                             │
-                       Wait Duration
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │   HALF_OPEN     │
-                    │ Test Requests   │
-                    └───────┬───┬─────┘
-                            │   │
-                   Success  │   │  Failure
-                            │   │
-                            ▼   └──────────► OPEN
-                         CLOSED
 
+flowchart TD
+    CLOSED["CLOSED<br/>Normal Traffic"]
+    OPEN["OPEN<br/>Calls Blocked"]
+    HALF["HALF-OPEN<br/>Test Requests"]
 
-```
+    CLOSED -->|"Failure threshold reached"| OPEN
+    OPEN -->|"Wait Duration"| HALF
+    HALF -->|"Success"| CLOSED
+    HALF -->|"Failure"| OPEN
+
 ### **Payment Service — `/api/payments/**`**
 
 | **Method** | **Endpoint** | **Description** |
@@ -1047,120 +1029,72 @@ curl -X POST http://localhost:8080/api/payments \
 
 ## 📂 Project Structure
 
-```aiignore
-NEXORA/
-│
-├── discovery-server/           # Eureka Server (:8761)
-│   └── src/main/java/com/nexora/discovery/
-│
-├── api-gateway/                # API Gateway (:8080)
-│   └── src/main/java/com/nexora/gateway/
-│
-├── auth-service/               # Auth + JWT (:8081)
-│   ├── src/main/java/com/nexora/auth/
-│   │   ├── config/
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── repository/
-│   │   ├── security/
-│   │   └── service/
-│   └── src/main/resources/
-│
-├── wallet-service/             # Wallet (:8082)
-│   ├── src/main/java/com/nexora/wallet/
-│   │   ├── common/
-│   │   ├── config/
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── repository/
-│   │   └── service/
-│   └── src/main/resources/
-│
-├── payment-service/            # Payment + Kafka Producer (:8083)
-│   ├── src/main/java/com/nexora/payment/
-│   │   ├── client/             # Feign: WalletClient
-│   │   ├── config/
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── event/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── producer/           # Kafka producer
-│   │   ├── repository/
-│   │   ├── resilience/         # Resilience4jService
-│   │   └── service/
-│   └── src/main/resources/
-│
-├── transaction-service/        # Financial Ledger + Consumer (:8084)
-│   ├── src/main/java/com/nexora/transaction/
-│   │   ├── config/
-│   │   ├── consumer/           # Kafka consumer
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── event/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── repository/
-│   │   └── service/
-│   └── src/main/resources/
-│
-├── notification-service/       # Notifications + Consumer (:8085)
-│   ├── src/main/java/com/nexora/notification/
-│   │   ├── config/
-│   │   ├── consumer/           # Kafka consumer
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── event/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── repository/
-│   │   └── service/
-│   └── src/main/resources/
-│
-├── audit-service/              # Audit + Consumer (:8086)
-│   ├── src/main/java/com/nexora/audit/
-│   │   ├── config/
-│   │   ├── consumer/
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── entity/
-│   │   ├── enums/
-│   │   ├── event/
-│   │   ├── exception/
-│   │   ├── mapper/
-│   │   ├── repository/
-│   │   └── service/
-│   └── src/main/resources/
-│
-└── fraud-detection-service/    # Fraud + Consumer (:8087)
-    ├── src/main/java/com/nexora/fraud/
-    │   ├── config/
-    │   ├── consumer/
-    │   ├── controller/
-    │   ├── dto/
-    │   ├── entity/
-    │   ├── enums/
-    │   ├── event/
-    │   ├── exception/
-    │   ├── mapper/
-    │   ├── repository/
-    │   └── service/
-    └── src/main/resources/
-```
+
+flowchart TB
+    ROOT["NEXORA<br/>Microservices Project"]
+
+    ROOT --> INFRA["Infrastructure"]
+    ROOT --> SERVICES["Microservices"]
+
+    INFRA --> DISC["Discovery Server<br/>Eureka · :8761"]
+    INFRA --> GATE["API Gateway<br/>:8080"]
+
+    SERVICES --> AUTH["Auth Service<br/>JWT · :8081"]
+    SERVICES --> WALLET["Wallet Service<br/>:8082"]
+    SERVICES --> PAYMENT["Payment Service<br/>Kafka Producer · :8083"]
+    SERVICES --> TXN["Transaction Service<br/>Financial Ledger · :8084"]
+    SERVICES --> NOTIF["Notification Service<br/>Kafka Consumer · :8085"]
+    SERVICES --> AUDIT["Audit Service<br/>Kafka Consumer · :8086"]
+    SERVICES --> FRAUD["Fraud Detection Service<br/>Kafka Consumer · :8087"]
+
+    AUTH --> A1["config · controller · dto"]
+    AUTH --> A2["entity · enums · exception"]
+    AUTH --> A3["mapper · repository · security · service"]
+    AUTH --> A4["src/main/resources"]
+
+    WALLET --> W1["common · config · controller"]
+    WALLET --> W2["dto · entity · enums · exception"]
+    WALLET --> W3["mapper · repository · service"]
+    WALLET --> W4["src/main/resources"]
+
+    PAYMENT --> P1["client · Feign WalletClient"]
+    PAYMENT --> P2["config · controller · dto"]
+    PAYMENT --> P3["entity · enums · event · exception"]
+    PAYMENT --> P4["mapper · producer · repository"]
+    PAYMENT --> P5["resilience · service"]
+    PAYMENT --> P6["src/main/resources"]
+
+    TXN --> T1["config · consumer · controller"]
+    TXN --> T2["dto · entity · enums · event"]
+    TXN --> T3["exception · mapper · repository · service"]
+    TXN --> T4["src/main/resources"]
+
+    NOTIF --> N1["config · consumer · controller"]
+    NOTIF --> N2["dto · entity · enums · event"]
+    NOTIF --> N3["exception · mapper · repository · service"]
+    NOTIF --> N4["src/main/resources"]
+
+    AUDIT --> AU1["config · consumer · controller"]
+    AUDIT --> AU2["dto · entity · enums · event"]
+    AUDIT --> AU3["exception · mapper · repository · service"]
+    AUDIT --> AU4["src/main/resources"]
+
+    FRAUD --> F1["config · consumer · controller"]
+    FRAUD --> F2["dto · entity · enums · event"]
+    FRAUD --> F3["exception · mapper · repository · service"]
+    FRAUD --> F4["src/main/resources"]
+
+    classDef rootStyle fill:#172554,stroke:#3b82f6,color:#ffffff,stroke-width:3px
+    classDef infraStyle fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef serviceStyle fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef packageStyle fill:#f3f4f6,stroke:#9ca3af,color:#1f2937
+
+    class ROOT rootStyle
+    class INFRA,SERVICES infraStyle
+    class DISC,GATE serviceStyle
+    class AUTH,WALLET,PAYMENT,TXN,NOTIF,AUDIT,FRAUD serviceStyle
+    class A1,A2,A3,A4,W1,W2,W3,W4,P1,P2,P3,P4,P5,P6,T1,T2,T3,T4,N1,N2,N3,N4,AU1,AU2,AU3,AU4,F1,F2,F3,F4 packageStyle
+
 ---
 
 ## 🗺️ Roadmap
