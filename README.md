@@ -1029,7 +1029,7 @@ curl -X POST http://localhost:8080/api/payments \
 
 ## 📂 Project Structure
 
-
+```mermaid
 flowchart TB
     ROOT["NEXORA<br/>Microservices Project"]
 
