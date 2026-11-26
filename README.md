@@ -104,93 +104,72 @@ NEXORA follows a **microservices architecture** with a **service-per-database** 
 
 <br/>
 
+
 <div align="center">
 
-```
-                            ┌──────────────────────────────────┐
-                            │           👤 CLIENT              │
-                            │     Postman / Web / Mobile       │
-                            └────────────────┬─────────────────┘
-                                             │
-                                             │ HTTPS
-                                             ▼
-                            ┌──────────────────────────────────┐
-                            │       🚪 API GATEWAY             │
-                            │          :8080                   │
-                            │  ────────────────────────────    │
-                            │  • Single Entry Point            │
-                            │  • Route Orchestration           │
-                            │  • Load Balancing                │
-                            │  • Path Rewriting                │
-                            └────────────────┬─────────────────┘
-                                             │
-                                             │ Service Lookup
-                                             ▼
-                  ┌──────────────────────────────────────────────────┐
-                  │        🧭 EUREKA DISCOVERY SERVER                │
-                  │                  :8761                           │
-                  │  ────────────────────────────────────────────    │
-                  │  • Service Registry                              │
-                  │  • Health Monitoring                             │
-                  │  • Dynamic Discovery                             │
-                  │  • Client-Side Load Balancing                    │
-                  └────────────────────┬─────────────────────────────┘
-                                       │
-        ┌──────────────────────────────┼──────────────────────────────┐
-        │                              │                              │
-        ▼                              ▼                              ▼
-┌───────────────┐              ┌───────────────┐              ┌───────────────┐
-│  🔐 AUTH      │              │  💰 WALLET    │              │  💳 PAYMENT   │
-│   SERVICE     │              │   SERVICE     │              │   SERVICE     │
-│    :8081      │              │    :8082      │              │    :8083      │
-├───────────────┤              ├───────────────┤              ├───────────────┤
-│ • Register    │              │ • Create      │◄─────────────│ • Create      │
-│ • Login       │              │ • Deposit     │   Feign      │ • Process     │
-│ • JWT Issue   │              │ • Withdraw    │   (Sync)     │ • Refund      │
-│ • Refresh     │              │ • Debit       │              │ • Cancel      │
-│ • Roles/RBAC  │              │ • Freeze      │              │ • Idempotency │
-└───────┬───────┘              └───────┬───────┘              └───────┬───────┘
-        │                              │                              │
-        ▼                              ▼                              ▼
-   ┌─────────┐                    ┌─────────┐                    ┌─────────┐
-   │Auth DB  │                    │Wallet DB│                    │ Pay DB  │
-   │ MySQL   │                    │ MySQL   │                    │ MySQL   │
-   └─────────┘                    └─────────┘                    └────┬────┘
-                                                                      │
-                                                                      │ 📤 Publish Event
-                                                                      ▼
-                                                        ┌──────────────────────────┐
-                                                        │    📨 APACHE KAFKA       │
-                                                        │         :9092            │
-                                                        │  ────────────────────    │
-                                                        │  Topic:                  │
-                                                        │   payment-events         │
-                                                        │  Partitions: 3           │
-                                                        └────────────┬─────────────┘
-                                                                     │
-                    ┌────────────────────────┬───────────────────────┼───────────────────┐
-                    │                        │                       │                   │
-                    ▼                        ▼                       ▼                   ▼
-            ┌───────────────┐        ┌───────────────┐       ┌───────────────┐   ┌───────────────┐
-            │  📬 NOTIF.    │        │  📋 AUDIT     │       │  🛡️ FRAUD     │   │  📒 TRANS.    │
-            │   SERVICE     │        │   SERVICE     │       │   SERVICE     │   │   SERVICE     │
-            │    :8085      │        │    :8086      │       │    :8087      │   │    :8084      │
-            ├───────────────┤        ├───────────────┤       ├───────────────┤   ├───────────────┤
-            │ 📥 CONSUMER   │        │ 📥 CONSUMER   │       │ 📥 CONSUMER   │   │ 📥 CONSUMER   │
-            │ • EMAIL       │        │ • Save logs   │       │ • Risk score  │   │ • Ledger      │
-            │ • SMS         │        │ • Trace       │       │ • Decisions   │   │ • History     │
-            │ • PUSH        │        │ • Compliance  │       │ • Alerts      │   │ • Reconcile   │
-            │ • IN_APP      │        │               │       │               │   │               │
-            └───────┬───────┘        └───────┬───────┘       └───────┬───────┘   └───────┬───────┘
-                    │                        │                       │                   │
-                    ▼                        ▼                       ▼                   ▼
-               ┌─────────┐              ┌─────────┐             ┌─────────┐         ┌─────────┐
-               │Notif DB │              │Audit DB │             │Fraud DB │         │ Txn DB  │
-               │ MySQL   │              │ MySQL   │             │ MySQL   │         │ MySQL   │
-               └─────────┘              └─────────┘             └─────────┘         └─────────┘
+```mermaid
+flowchart TB
+    CLIENT["👤 CLIENT<br/>Postman / Web / Mobile"]
+
+    GATEWAY["🚪 API GATEWAY<br/>Port: 8080<br/>Single Entry Point · Routing · Load Balancing"]
+
+    EUREKA["🧭 EUREKA DISCOVERY SERVER<br/>Port: 8761<br/>Service Registry · Health Monitoring"]
+
+    CLIENT -->|HTTPS| GATEWAY
+    GATEWAY -->|Service Discovery| EUREKA
+
+    subgraph CORE["CORE MICROSERVICES"]
+        direction LR
+        AUTH["🔐 AUTH SERVICE<br/>8081<br/>Register · Login · JWT"]
+        WALLET["💰 WALLET SERVICE<br/>8082<br/>Deposit · Withdraw · Debit"]
+        PAYMENT["💳 PAYMENT SERVICE<br/>8083<br/>Process · Refund · Idempotency"]
+    end
+
+    EUREKA -.-> AUTH
+    EUREKA -.-> WALLET
+    EUREKA -.-> PAYMENT
+
+    PAYMENT -->|Feign Client<br/>Synchronous| WALLET
+
+    AUTH --> AUTHDB[("Auth DB<br/>MySQL")]
+    WALLET --> WALLETDB[("Wallet DB<br/>MySQL")]
+    PAYMENT --> PAYDB[("Payment DB<br/>MySQL")]
+
+    PAYMENT -->|Publish Events| KAFKA[["📨 APACHE KAFKA<br/>payment-events<br/>Port: 9092"]]
+
+    subgraph CONSUMERS["EVENT-DRIVEN CONSUMER MICROSERVICES"]
+        direction LR
+        NOTIF["📬 NOTIFICATION<br/>SERVICE<br/>8085"]
+        AUDIT["📋 AUDIT<br/>SERVICE<br/>8086"]
+        FRAUD["🛡️ FRAUD<br/>SERVICE<br/>8087"]
+        TRANS["📒 TRANSACTION<br/>SERVICE<br/>8084"]
+    end
+
+    KAFKA --> NOTIF
+    KAFKA --> AUDIT
+    KAFKA --> FRAUD
+    KAFKA --> TRANS
+
+    NOTIF --> NOTIFDB[("Notification DB<br/>MySQL")]
+    AUDIT --> AUDITDB[("Audit DB<br/>MySQL")]
+    FRAUD --> FRAUDB[("Fraud DB<br/>MySQL")]
+    TRANS --> TRANSDB[("Transaction DB<br/>MySQL")]
+
+    classDef gateway fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef discovery fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef service fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef messaging fill:#f3e8ff,stroke:#9333ea,color:#581c87
+    classDef database fill:#f1f5f9,stroke:#64748b,color:#334155
+
+    class GATEWAY gateway
+    class EUREKA discovery
+    class AUTH,WALLET,PAYMENT,NOTIF,AUDIT,FRAUD,TRANS service
+    class KAFKA messaging
+    class AUTHDB,WALLETDB,PAYDB,NOTIFDB,AUDITDB,FRAUDB,TRANSDB database
 ```
 
 </div>
+
 
 <br/>
 
@@ -495,41 +474,19 @@ The Payment Service uses **Resilience4j** to make Payment → Wallet communicati
 
 The Circuit Breaker operates in three main states:
 
-```text
-                    ┌─────────────────┐
-                    │      CLOSED     │
-                    │  Normal Traffic │
-                    └────────┬────────┘
-                             │
-                  Failure threshold reached
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │       OPEN      │
-                    │  Calls Blocked  │
-                    └────────┬────────┘
-                             │
-                       Wait Duration
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │   HALF_OPEN     │
-                    │ Test Requests   │
-                    └───────┬───┬─────┘
-                            │   │
-                   Success  │   │  Failure
-                            │   │
-                            ▼   └──────────► OPEN
-                         CLOSED
 
+```mermaid
+flowchart TD
+    CLOSED["CLOSED<br/>Normal Traffic"]
+    OPEN["OPEN<br/>Calls Blocked"]
+    HALF["HALF-OPEN<br/>Test Requests"]
 
+    CLOSED -->|"Failure threshold reached (50%)"| OPEN
+    OPEN -->|"Wait Duration (30s)"| HALF
+    HALF -->|"Success"| CLOSED
+    HALF -->|"Failure"| OPEN
 ```
-Circuit Breaker States:
-```aiignore
-   CLOSED ──[50% failures]──► OPEN ──[30s]──► HALF-OPEN
-     ▲                                              │
-     └──────────[success]───────────────────────────┘
-```
+
 ## 📨 Event-Driven Architecture
 
 The Payment Service uses **Apache Kafka** for asynchronous, event-driven communication between services.
@@ -546,81 +503,28 @@ The Payment Service uses **Apache Kafka** for asynchronous, event-driven communi
 
 ### **Event Flow**
 
-```text
-┌──────────────────┐
-│  Payment Service │
-└────────┬─────────┘
-         │
-         │ Payment Completed
-         ▼
-┌──────────────────┐
-│  Kafka Producer  │
-└────────┬─────────┘
-         │
-         │ Publish PaymentEvent
-         ▼
-┌──────────────────────────────┐
-│ Kafka Topic: payment-events  │
-│                              │
-│ Partition 0                  │
-│ Partition 1                  │
-│ Partition 2                  │
-└──────────────┬───────────────┘
-               │
-               │ Consume Event
-               ▼
-┌──────────────────┐
-│ Kafka Consumer   │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│  Other Services  │
-│                  │
-│ Notification     │
-│ Audit            │
-│ Order            │
-└──────────────────┘
 
+```mermaid
+flowchart TD
+    PAYMENT["Payment Service<br/>Producer"]
+    KAFKA["Apache Kafka<br/>Topic: payment-events<br/>3 Partitions"]
+
+    PAYMENT -->|"Publish PaymentEvent"| KAFKA
+
+    KAFKA --> NOTIF["Notification Consumer<br/>Group: notification"]
+    KAFKA --> AUDIT["Audit Consumer<br/>Group: audit-group"]
+    KAFKA --> FRAUD["Fraud Consumer<br/>Group: fraud-group"]
+    KAFKA --> TRANS["Transaction Consumer<br/>Group: txn-group"]
+
+    classDef producer fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef kafka fill:#f3e8ff,stroke:#9333ea,color:#581c87
+    classDef consumer fill:#dcfce7,stroke:#16a34a,color:#14532d
+
+    class PAYMENT producer
+    class KAFKA kafka
+    class NOTIF,AUDIT,FRAUD,TRANS consumer
 ```
-```aiignore
-┌──────────────────────┐
-│  PAYMENT SERVICE     │
-│    (PRODUCER)        │
-└──────────┬───────────┘
-           │
-           │ publish "payment-events"
-           ▼
-┌──────────────────────┐
-│      KAFKA           │
-│  (3 partitions)      │
-└──────────┬───────────┘
-           │
-    ┌──────┴──────┬──────────────┬──────────────┐
-    │             │              │              │
-    ▼             ▼              ▼              ▼
-┌─────────┐  ┌─────────┐   ┌─────────┐   ┌─────────┐
-│NOTIFIC. │  │ AUDIT   │   │ FRAUD   │   │TRANSACT.│
-│ group:  │  │ group:  │   │ group:  │   │ group:  │
-│notif-    │  │audit-   │   │fraud-   │   │txn-     │
-│ication  │  │group    │   │group    │   │group    │
-└─────────┘  └─────────┘   └─────────┘   └─────────┘
-```
-Event Payload
-```aiignore
-{
-  "paymentId": "6c0958a8-d320-4735-9016-2fa602c0de7d",
-  "userId": "ea5aacde-52f3-48d6-8f37-69f6e0c45603",
-  "walletId": "c3badf64-0367-4cbd-b167-7b9a1f192b14",
-  "referenceId": "PAY-RES-003",
-  "amount": 200.00,
-  "method": "WALLET",
-  "status": "PENDING",
-  "transactionId": null,
-  "eventTime": "2026-10-02T16:11:19.0420231",
-  "eventType": "PAYMENT_CREATED"
-}
-```
+
 ### **Event Types**
 
 | **Event Type** | **Trigger** | **Consumers React** |
