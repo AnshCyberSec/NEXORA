@@ -799,7 +799,7 @@ The Payment Service uses **Resilience4j** to make Payment → Wallet communicati
 
 The Circuit Breaker operates in three main states:
 
-
+```mermaid
 flowchart TD
     CLOSED["CLOSED<br/>Normal Traffic"]
     OPEN["OPEN<br/>Calls Blocked"]
@@ -809,7 +809,8 @@ flowchart TD
     OPEN -->|"Wait Duration"| HALF
     HALF -->|"Success"| CLOSED
     HALF -->|"Failure"| OPEN
-
+```
+---
 ### **Payment Service — `/api/payments/**`**
 
 | **Method** | **Endpoint** | **Description** |
@@ -1094,7 +1095,7 @@ flowchart TB
     class DISC,GATE serviceStyle
     class AUTH,WALLET,PAYMENT,TXN,NOTIF,AUDIT,FRAUD serviceStyle
     class A1,A2,A3,A4,W1,W2,W3,W4,P1,P2,P3,P4,P5,P6,T1,T2,T3,T4,N1,N2,N3,N4,AU1,AU2,AU3,AU4,F1,F2,F3,F4 packageStyle
-
+```
 ---
 
 ## 🗺️ Roadmap
